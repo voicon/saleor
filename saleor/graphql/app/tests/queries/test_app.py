@@ -133,6 +133,24 @@ def test_app_with_access_to_resources(
     get_graphql_content(response)
 
 
+def test_app_without_id_as_staff(
+    staff_api_client,
+    app,
+    permission_manage_apps,
+    order_with_lines,
+):
+    webhook = Webhook.objects.create(
+        name="Simple webhook", app=app, target_url="http://www.example.com/test"
+    )
+    webhook.events.create(event_type=WebhookEventType.ORDER_CREATED)
+
+    response = staff_api_client.post_graphql(
+        QUERY_APP, permissions=[permission_manage_apps]
+    )
+    content = get_graphql_content(response)
+    assert content["data"]["app"] is None
+
+
 def test_own_app_without_id(
     app_api_client,
     app,
@@ -178,6 +196,17 @@ def test_app_query_without_permission(
     response = app_api_client.post_graphql(
         QUERY_APP,
         variables,
+    )
+    assert_no_permission(response)
+
+
+def test_app_query_without_permission_and_id(
+    staff_api_client,
+    app,
+    order_with_lines,
+):
+    response = staff_api_client.post_graphql(
+        QUERY_APP,
     )
     assert_no_permission(response)
 
